@@ -86,16 +86,7 @@ npm run dev         # Runs on http://localhost:5173
 
 ---
 
-## 🗺 Roadmap
 
-- [x] **Phase 1** — Application (Node.js + React) ← *You are here*
-- [ ] **Phase 2** — Git & GitHub workflow
-- [ ] **Phase 3** — Docker + Docker Compose
-- [ ] **Phase 4** — AWS EC2 + Nginx
-- [ ] **Phase 5** — Jenkins CI/CD pipeline
-- [ ] **Phase 6** — Prometheus + Grafana monitoring
-
----
 
 ## 📦 Tech Stack
 
