@@ -1,0 +1,47 @@
+services:
+  database:
+    image: mongo:6.0
+    container_name: task-manager-db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - task_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: task-manager-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://database:27017/taskdb
+    depends_on:
+      - database
+    networks:
+      - task_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: task-manager-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - task_network
+
+volumes:
+  mongo_data:
+
+networks:
+  task_network:
+    driver: bridge
