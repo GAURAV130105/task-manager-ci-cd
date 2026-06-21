@@ -87,10 +87,10 @@ jobs:
             git pull origin master
 
             # Pull the newest Docker images from Docker Hub
-            docker compose pull
+            docker-compose pull
 
             # Restart all containers with the new images (zero downtime swap)
-            docker compose up -d --remove-orphans
+            docker-compose up -d --remove-orphans
 
             # Remove old/unused Docker images to free up disk space on the VM
             docker image prune -f
