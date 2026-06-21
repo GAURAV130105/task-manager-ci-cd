@@ -1,20 +1,20 @@
-# Base image with Node.js runtime
+# Use lightweight Node 18 Alpine image for the backend
 FROM node:18-alpine
 
 # Set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Copy package lists first (leveraging Docker build cache)
+# Copy package files first (Docker caches this layer if package.json is unchanged)
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm install --production
+# Install only production dependencies (skip devDependencies like nodemon)
+RUN npm install --omit=dev
 
-# Copy the rest of the backend application code
+# Copy all remaining backend source files
 COPY . .
 
-# Expose the API port
+# Expose the port the Express server listens on
 EXPOSE 5000
 
-# Start the Express server
+# Start the Node.js server
 CMD ["node", "server.js"]

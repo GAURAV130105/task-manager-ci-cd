@@ -12,12 +12,9 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/taskdb
 
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost',        // Docker Nginx (port 80)
-    'http://localhost:80',     // Docker Nginx explicit port
-    'http://localhost:5173',   // Vite dev server
-    'http://localhost:3000',   // Alternative dev port
-  ],
+  // Allow all origins — safe because port 5000 is blocked by Azure NSG.
+  // Only the frontend Nginx container (on the same Docker network) reaches the backend.
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

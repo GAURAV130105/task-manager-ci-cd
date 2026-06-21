@@ -3,33 +3,31 @@ services:
     image: mongo:6.0
     container_name: task-manager-db
     restart: always
-    ports:
-      - "27017:27017"
     volumes:
+      # Persist MongoDB data even when containers are stopped/restarted
       - mongo_data:/data/db
     networks:
       - task_network
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    # Pull the pre-built image from Docker Hub (pushed by GitHub Actions)
+    image: ${DOCKERHUB_USERNAME:-gaurav130105}/taskmanager-backend:latest
     container_name: task-manager-backend
     restart: always
     ports:
       - "5000:5000"
     environment:
       - PORT=5000
-      - MONGODB_URI=mongodb://database:27017/taskdb
+      # MONGODB_URI is loaded from the .env file on the server
+      - MONGODB_URI=${MONGODB_URI}
     depends_on:
       - database
     networks:
       - task_network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    # Pull the pre-built image from Docker Hub (pushed by GitHub Actions)
+    image: ${DOCKERHUB_USERNAME:-gaurav130105}/taskmanager-frontend:latest
     container_name: task-manager-frontend
     restart: always
     ports:

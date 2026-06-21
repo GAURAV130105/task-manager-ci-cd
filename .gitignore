@@ -1,0 +1,9 @@
+# Environment files — never commit real credentials
+.env
+.env.production
+.env.local
+.env.*.local
+
+# OS generated files
+.DS_Store
+Thumbs.db

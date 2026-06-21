@@ -1,0 +1,98 @@
+name: CI/CD — Build, Push and Deploy to Azure VM
+
+# Trigger: runs automatically whenever code is pushed to the master branch
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    name: Build Docker Images and Deploy to Azure
+    # GitHub provides a free Ubuntu Linux machine to run these steps
+    runs-on: ubuntu-latest
+
+    steps:
+      # ─────────────────────────────────────────────────
+      # STEP 1: Download your repo code onto the runner
+      # ─────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ─────────────────────────────────────────────────
+      # STEP 2: Set up Docker Buildx
+      # Buildx is an enhanced Docker build tool that enables
+      # multi-platform builds and better caching
+      # ─────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ─────────────────────────────────────────────────
+      # STEP 3: Log in to Docker Hub
+      # Uses the DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets
+      # you configured in GitHub → Settings → Secrets
+      # ─────────────────────────────────────────────────
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ─────────────────────────────────────────────────
+      # STEP 4: Build the backend Docker image and push to Docker Hub
+      # context: ./backend tells Docker to look in the backend/ folder
+      # tags: the name:tag format the image will be stored as on Docker Hub
+      # ─────────────────────────────────────────────────
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ─────────────────────────────────────────────────
+      # STEP 5: Build the frontend Docker image (React + Nginx) and push
+      # The frontend Dockerfile is a multi-stage build:
+      #   Stage 1: node:20-alpine — runs "npm run build"
+      #   Stage 2: nginx:1.25-alpine — serves the built static files
+      # ─────────────────────────────────────────────────
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ─────────────────────────────────────────────────
+      # STEP 6: SSH into the Azure VM and deploy the new images
+      # appleboy/ssh-action connects to the VM using the IP,
+      # username, and private key stored in GitHub Secrets,
+      # then runs the "script" block on the remote server
+      # ─────────────────────────────────────────────────
+      - name: Deploy to Azure VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_IP }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            # Navigate to the project directory on the VM
+            cd ~/task-manager-ci-cd
+
+            # Pull the latest code from GitHub (to get updated docker-compose.yml)
+            git pull origin master
+
+            # Pull the newest Docker images from Docker Hub
+            docker compose pull
+
+            # Restart all containers with the new images (zero downtime swap)
+            docker compose up -d --remove-orphans
+
+            # Remove old/unused Docker images to free up disk space on the VM
+            docker image prune -f
+
+            echo "✅ Deployment complete!"
