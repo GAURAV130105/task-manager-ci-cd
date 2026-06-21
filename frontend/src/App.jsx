@@ -7,7 +7,7 @@ import StatsBar from './components/StatsBar'
 import EditModal from './components/EditModal'
 import './App.css'
 
-const API_BASE = 'http://localhost:5000/api/tasks'
+const API_BASE = '/api/tasks'
 
 function App() {
   const [tasks, setTasks] = useState([])
