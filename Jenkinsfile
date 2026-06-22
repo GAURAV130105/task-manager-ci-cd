@@ -4,9 +4,10 @@ pipeline {
     environment {
         // Must match the ID you set in Jenkins → Manage Jenkins → Credentials
         DOCKER_HUB_CREDS = 'docker-hub-credentials'
-        // Your Docker Hub username
+        // Your Docker Hub username (used for building and pushing images)
         DOCKER_USER = 'gaauraav13'
-        // Jenkins workspace already contains the checked-out code — no need to cd elsewhere
+        // Must match DOCKERHUB_USERNAME in docker-compose.yml image references
+        DOCKERHUB_USERNAME = 'gaauraav13'
     }
 
     stages {
@@ -72,8 +73,10 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 echo '🚀 Deploying updated containers...'
-                // Jenkins already checked out the code into the workspace directory
-                // docker-compose.yml is right here — no need to cd anywhere
+                // Copy the .env file (with MONGODB_URI) from the home directory
+                // This file exists on the VM but is never committed to GitHub (secret)
+                sh 'cp /home/azureuser/task-manager-ci-cd/.env .env'
+                // Pull latest images and restart containers
                 sh 'docker-compose pull'
                 sh 'docker-compose up -d --remove-orphans'
                 sh 'docker image prune -f'
