@@ -7,7 +7,7 @@ pipeline {
         // Your Docker Hub username
         DOCKER_USER = 'gaauraav13'
         // Folder where docker-compose.yml lives on the Jenkins VM
-        PROJECT_DIR = '/home/azureuser/task-manager-ci-cd'
+        PROJECT_DIR = '/home/azureuser/taskcicd'
     }
 
     stages {
