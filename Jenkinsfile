@@ -6,8 +6,7 @@ pipeline {
         DOCKER_HUB_CREDS = 'docker-hub-credentials'
         // Your Docker Hub username
         DOCKER_USER = 'gaauraav13'
-        // Folder where docker-compose.yml lives on the Jenkins VM
-        PROJECT_DIR = '/home/azureuser/taskcicd'
+        // Jenkins workspace already contains the checked-out code — no need to cd elsewhere
     }
 
     stages {
@@ -73,12 +72,11 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 echo '🚀 Deploying updated containers...'
-                sh """
-                    cd ${PROJECT_DIR}
-                    docker-compose pull
-                    docker-compose up -d --remove-orphans
-                    docker image prune -f
-                """
+                // Jenkins already checked out the code into the workspace directory
+                // docker-compose.yml is right here — no need to cd anywhere
+                sh 'docker-compose pull'
+                sh 'docker-compose up -d --remove-orphans'
+                sh 'docker image prune -f'
             }
         }
     }
