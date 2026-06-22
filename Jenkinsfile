@@ -47,7 +47,7 @@ pipeline {
         stage('Build & Push Backend Image') {
             steps {
                 echo '🔨 Building backend Docker image...'
-                sh "docker build -t ${DOCKER_USER}/taskmanager-backend:latest ./backend"
+                sh "docker build --platform linux/amd64 -t ${DOCKER_USER}/taskmanager-backend:latest ./backend"
                 echo '📤 Pushing backend image to Docker Hub...'
                 sh "docker push ${DOCKER_USER}/taskmanager-backend:latest"
             }
@@ -60,7 +60,7 @@ pipeline {
         stage('Build & Push Frontend Image') {
             steps {
                 echo '🔨 Building frontend Docker image...'
-                sh "docker build -t ${DOCKER_USER}/taskmanager-frontend:latest ./frontend"
+                sh "docker build --platform linux/amd64 -t ${DOCKER_USER}/taskmanager-frontend:latest ./frontend"
                 echo '📤 Pushing frontend image to Docker Hub...'
                 sh "docker push ${DOCKER_USER}/taskmanager-frontend:latest"
             }
