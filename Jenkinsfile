@@ -76,9 +76,13 @@ pipeline {
                 // Copy the .env file (with MONGODB_URI) from the home directory
                 // This file exists on the VM but is never committed to GitHub (secret)
                 sh 'cp /home/azureuser/task-manager-ci-cd/.env .env'
-                // Pull latest images and restart containers
+                // Stop any existing containers to avoid name conflicts
+                sh 'docker-compose down || true'
+                // Pull latest images from Docker Hub
                 sh 'docker-compose pull'
+                // Start containers fresh with new images
                 sh 'docker-compose up -d --remove-orphans'
+                // Clean up old unused images to save disk space
                 sh 'docker image prune -f'
             }
         }
