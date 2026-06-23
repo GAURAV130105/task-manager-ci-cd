@@ -26,12 +26,17 @@ services:
       - task_network
 
   frontend:
-    # Pull the pre-built image from Docker Hub (pushed by GitHub Actions)
+    # Pull the pre-built image from Docker Hub (pushed by GitHub Actions / Jenkins)
     image: ${DOCKERHUB_USERNAME:-gaurav130105}/taskmanager-frontend:latest
     container_name: task-manager-frontend
     restart: always
     ports:
       - "80:80"
+      - "443:443"        # HTTPS port mapped for SSL traffic
+    volumes:
+      # Mount Let's Encrypt certificates from host VM into container (read-only)
+      # Certbot stores certificates here after running: sudo certbot certonly
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
     networks:
