@@ -11,7 +11,7 @@ services:
 
   backend:
     # Pull the pre-built image from Docker Hub (pushed by GitHub Actions)
-    image: ${DOCKERHUB_USERNAME:-gaurav130105}/taskmanager-backend:latest
+    image: ${DOCKERHUB_USERNAME:-gaauraav13}/taskmanager-backend:latest
     container_name: task-manager-backend
     restart: always
     ports:
@@ -27,7 +27,7 @@ services:
 
   frontend:
     # Pull the pre-built image from Docker Hub (pushed by GitHub Actions / Jenkins)
-    image: ${DOCKERHUB_USERNAME:-gaurav130105}/taskmanager-frontend:latest
+    image: ${DOCKERHUB_USERNAME:-gaauraav13}/taskmanager-frontend:latest
     container_name: task-manager-frontend
     restart: always
     ports:
