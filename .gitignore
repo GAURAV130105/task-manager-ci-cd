@@ -8,3 +8,11 @@
 .DS_Store
 Thumbs.db
 *.md
+
+# Terraform files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+*.tfvars
+*.tfvars.json
