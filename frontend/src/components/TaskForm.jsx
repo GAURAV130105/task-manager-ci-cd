@@ -8,14 +8,11 @@ const defaultForm = {
   dueDate: '',
 }
 
-function TaskForm({ onSubmit }) {
+function TaskForm({ onSubmit, onClose }) {
   const [form, setForm] = useState(defaultForm)
-  const [expanded, setExpanded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -26,63 +23,73 @@ function TaskForm({ onSubmit }) {
       ...form,
       title: trimmedTitle,
       description: form.description.trim(),
-      dueDate: form.dueDate || null
+      dueDate: form.dueDate || null,
     })
     setForm(defaultForm)
-    setExpanded(false)
     setSubmitting(false)
   }
 
   return (
-    <div className="card form-card">
-      <div className="form-card__header" onClick={() => setExpanded(!expanded)}>
-        <div className="form-card__header-left">
-          <span className="form-card__plus">{expanded ? '−' : '+'}</span>
-          <span className="form-card__label">Add New Task</span>
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add new task"
+      >
+        <div className="modal__header">
+          <div className="modal__title-group">
+            <div className="modal__title-icon">✦</div>
+            <h2 className="modal__title">New Task</h2>
+          </div>
+          <button className="modal__close" onClick={onClose} aria-label="Close">×</button>
         </div>
-        <span className="form-card__hint">{expanded ? 'Click to collapse' : 'Click to expand'}</span>
-      </div>
 
-      {expanded && (
-        <form className="task-form" onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group form-group--full">
-              <label htmlFor="title" className="form-label">Task Title * (max 100 chars)</label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                className="form-input"
-                placeholder="What needs to be done?"
-                value={form.title}
-                onChange={handleChange}
-                maxLength={100}
-                required
-                autoFocus
-              />
-            </div>
+        <form className="task-form" onSubmit={handleSubmit} noValidate>
+          {/* Title */}
+          <div className="form-group">
+            <label htmlFor="add-title" className="form-label">Task Title *</label>
+            <input
+              id="add-title"
+              name="title"
+              type="text"
+              className="form-input"
+              placeholder="What needs to be done?"
+              value={form.title}
+              onChange={handleChange}
+              maxLength={100}
+              required
+              autoFocus
+            />
           </div>
 
-          <div className="form-row">
-            <div className="form-group form-group--full">
-              <label htmlFor="description" className="form-label">Description (max 500 chars)</label>
-              <textarea
-                id="description"
-                name="description"
-                className="form-input form-textarea"
-                placeholder="Add details (optional)…"
-                value={form.description}
-                onChange={handleChange}
-                maxLength={500}
-                rows={3}
-              />
-            </div>
+          {/* Description */}
+          <div className="form-group">
+            <label htmlFor="add-desc" className="form-label">Description</label>
+            <textarea
+              id="add-desc"
+              name="description"
+              className="form-input form-textarea"
+              placeholder="Add details (optional)…"
+              value={form.description}
+              onChange={handleChange}
+              maxLength={500}
+              rows={3}
+            />
           </div>
 
-          <div className="form-row form-row--3col">
+          {/* Priority / Status / Due date */}
+          <div className="form-row-3">
             <div className="form-group">
-              <label htmlFor="priority" className="form-label">Priority</label>
-              <select id="priority" name="priority" className="form-input form-select" value={form.priority} onChange={handleChange}>
+              <label htmlFor="add-priority" className="form-label">Priority</label>
+              <select
+                id="add-priority"
+                name="priority"
+                className="form-input form-select"
+                value={form.priority}
+                onChange={handleChange}
+              >
                 <option value="low">🟢 Low</option>
                 <option value="medium">🟡 Medium</option>
                 <option value="high">🔴 High</option>
@@ -90,18 +97,24 @@ function TaskForm({ onSubmit }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="status" className="form-label">Status</label>
-              <select id="status" name="status" className="form-input form-select" value={form.status} onChange={handleChange}>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
+              <label htmlFor="add-status" className="form-label">Status</label>
+              <select
+                id="add-status"
+                name="status"
+                className="form-input form-select"
+                value={form.status}
+                onChange={handleChange}
+              >
+                <option value="pending">⏳ Pending</option>
+                <option value="in-progress">🔵 In Progress</option>
+                <option value="completed">✅ Completed</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="dueDate" className="form-label">Due Date</label>
+              <label htmlFor="add-duedate" className="form-label">Due Date</label>
               <input
-                id="dueDate"
+                id="add-duedate"
                 name="dueDate"
                 type="date"
                 className="form-input"
@@ -111,16 +124,26 @@ function TaskForm({ onSubmit }) {
             </div>
           </div>
 
+          {/* Actions */}
           <div className="form-actions">
-            <button type="button" className="btn btn--ghost" onClick={() => { setForm(defaultForm); setExpanded(false) }}>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => { setForm(defaultForm); onClose() }}
+            >
               Cancel
             </button>
-            <button type="submit" className="btn btn--primary" disabled={submitting || !form.title.trim()}>
-              {submitting ? 'Adding…' : '+ Add Task'}
+            <button
+              id="btn-submit-task"
+              type="submit"
+              className="btn btn--primary"
+              disabled={submitting || !form.title.trim()}
+            >
+              {submitting ? '⏳ Adding…' : '✦ Create Task'}
             </button>
           </div>
         </form>
-      )}
+      </div>
     </div>
   )
 }

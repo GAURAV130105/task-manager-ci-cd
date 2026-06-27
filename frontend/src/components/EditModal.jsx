@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react'
 
 function EditModal({ task, onSave, onClose }) {
   const [form, setForm] = useState({
-    title: task.title || '',
+    title:       task.title       || '',
     description: task.description || '',
-    priority: task.priority || 'medium',
-    status: task.status || 'pending',
-    dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
+    priority:    task.priority    || 'medium',
+    status:      task.status      || 'pending',
+    dueDate:     task.dueDate ? task.dueDate.slice(0, 10) : '',
   })
   const [saving, setSaving] = useState(false)
 
-  // Close on Escape key
+  // Close on Escape
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleKey)
@@ -29,14 +29,24 @@ function EditModal({ task, onSave, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Edit Task">
+      <div
+        className="modal"
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit task"
+      >
         <div className="modal__header">
-          <h2 className="modal__title">✏️ Edit Task</h2>
+          <div className="modal__title-group">
+            <div className="modal__title-icon">✏️</div>
+            <h2 className="modal__title">Edit Task</h2>
+          </div>
           <button className="modal__close" onClick={onClose} aria-label="Close">×</button>
         </div>
 
-        <form className="task-form" onSubmit={handleSubmit}>
-          <div className="form-group form-group--full">
+        <form className="task-form" onSubmit={handleSubmit} noValidate>
+          {/* Title */}
+          <div className="form-group">
             <label htmlFor="edit-title" className="form-label">Task Title *</label>
             <input
               id="edit-title"
@@ -47,25 +57,35 @@ function EditModal({ task, onSave, onClose }) {
               onChange={handleChange}
               required
               autoFocus
+              maxLength={100}
             />
           </div>
 
-          <div className="form-group form-group--full">
-            <label htmlFor="edit-description" className="form-label">Description</label>
+          {/* Description */}
+          <div className="form-group">
+            <label htmlFor="edit-desc" className="form-label">Description</label>
             <textarea
-              id="edit-description"
+              id="edit-desc"
               name="description"
               className="form-input form-textarea"
               value={form.description}
               onChange={handleChange}
               rows={3}
+              maxLength={500}
             />
           </div>
 
-          <div className="form-row form-row--3col">
+          {/* Priority / Status / Due date */}
+          <div className="form-row-3">
             <div className="form-group">
               <label htmlFor="edit-priority" className="form-label">Priority</label>
-              <select id="edit-priority" name="priority" className="form-input form-select" value={form.priority} onChange={handleChange}>
+              <select
+                id="edit-priority"
+                name="priority"
+                className="form-input form-select"
+                value={form.priority}
+                onChange={handleChange}
+              >
                 <option value="low">🟢 Low</option>
                 <option value="medium">🟡 Medium</option>
                 <option value="high">🔴 High</option>
@@ -74,17 +94,23 @@ function EditModal({ task, onSave, onClose }) {
 
             <div className="form-group">
               <label htmlFor="edit-status" className="form-label">Status</label>
-              <select id="edit-status" name="status" className="form-input form-select" value={form.status} onChange={handleChange}>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
+              <select
+                id="edit-status"
+                name="status"
+                className="form-input form-select"
+                value={form.status}
+                onChange={handleChange}
+              >
+                <option value="pending">⏳ Pending</option>
+                <option value="in-progress">🔵 In Progress</option>
+                <option value="completed">✅ Completed</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="edit-dueDate" className="form-label">Due Date</label>
+              <label htmlFor="edit-duedate" className="form-label">Due Date</label>
               <input
-                id="edit-dueDate"
+                id="edit-duedate"
                 name="dueDate"
                 type="date"
                 className="form-input"
@@ -94,10 +120,18 @@ function EditModal({ task, onSave, onClose }) {
             </div>
           </div>
 
+          {/* Actions */}
           <div className="form-actions">
-            <button type="button" className="btn btn--ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn--primary" disabled={saving || !form.title.trim()}>
-              {saving ? 'Saving…' : 'Save Changes'}
+            <button type="button" className="btn btn--ghost" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              id="btn-save-task"
+              type="submit"
+              className="btn btn--primary"
+              disabled={saving || !form.title.trim()}
+            >
+              {saving ? '⏳ Saving…' : '✔ Save Changes'}
             </button>
           </div>
         </form>
