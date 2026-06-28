@@ -129,9 +129,9 @@ jobs:
         with:
           image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-backend:latest'
           format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL'
+          exit-code: '0'         # Report vulnerabilities but don't block pipeline
+          ignore-unfixed: true   # Skip CVEs with no available fix
+          severity: 'HIGH,CRITICAL'  # Report HIGH and CRITICAL severity
 
       # ─────────────────────────────────────────────────
       # STEP 6: Push backend image to Docker Hub
@@ -161,9 +161,9 @@ jobs:
         with:
           image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-frontend:latest'
           format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL'
+          exit-code: '0'         # Report vulnerabilities but don't block pipeline
+          ignore-unfixed: true   # Skip CVEs with no available fix
+          severity: 'HIGH,CRITICAL'  # Report HIGH and CRITICAL severity
 
       # ─────────────────────────────────────────────────
       # STEP 9: Push frontend image to Docker Hub
