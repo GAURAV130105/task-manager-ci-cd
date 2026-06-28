@@ -2,6 +2,9 @@
 # Use Node 20 (required by Vite 6.x)
 FROM node:20-alpine AS builder
 
+# Patch ALL Alpine OS packages to their latest secure versions
+RUN apk update && apk upgrade --no-cache
+
 # Set the working directory inside the container
 WORKDIR /app
 
@@ -20,6 +23,9 @@ RUN npm run build
 # ── Stage 2: Serve with Nginx ──────────────────────────────────
 # Start fresh from a tiny Nginx image — no Node.js, no source code
 FROM nginx:1.25-alpine
+
+# Patch ALL Alpine OS packages to their latest secure versions
+RUN apk update && apk upgrade --no-cache
 
 # Copy the compiled static files from the builder stage into Nginx's web root
 COPY --from=builder /app/dist /usr/share/nginx/html
