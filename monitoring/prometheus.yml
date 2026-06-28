@@ -1,0 +1,31 @@
+# Prometheus Configuration File
+# Defines what targets Prometheus scrapes for metrics and how often
+
+global:
+  scrape_interval: 15s       # Scrape every 15 seconds by default
+  evaluation_interval: 15s   # Evaluate rules every 15 seconds
+
+scrape_configs:
+
+  # 1. Scrape Prometheus itself (for meta-monitoring)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Scrape our Node.js backend /metrics endpoint
+  - job_name: 'taskmanager-backend'
+    static_configs:
+      - targets: ['backend:5000']
+    metrics_path: /metrics
+
+  # 3. Scrape cAdvisor for Docker container metrics
+  # (CPU %, Memory usage, Network I/O per container)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8090']
+
+  # 4. Scrape Node Exporter for host VM metrics
+  # (Disk usage, RAM, CPU cores, system uptime)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
