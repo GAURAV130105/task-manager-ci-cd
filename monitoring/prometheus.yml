@@ -22,7 +22,7 @@ scrape_configs:
   # (CPU %, Memory usage, Network I/O per container)
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['cadvisor:8090']
+      - targets: ['cadvisor:8080']
 
   # 4. Scrape Node Exporter for host VM metrics
   # (Disk usage, RAM, CPU cores, system uptime)
