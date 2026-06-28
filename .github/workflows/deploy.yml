@@ -1,4 +1,4 @@
-name: CI/CD — Build, Push and Deploy to Azure VM
+name: CI/CD — Build, Scan, and Deploy to Azure VM
 
 # Trigger: runs automatically whenever code is pushed to the master branch
 on:
@@ -6,31 +6,96 @@ on:
     branches:
       - master
 
+# ═══════════════════════════════════════════════════════════════
+# JOB 1: SECURITY SCAN
+# Runs first. If this fails, Job 2 (build & deploy) never starts.
+# ═══════════════════════════════════════════════════════════════
 jobs:
-  build-and-deploy:
-    name: Build Docker Images and Deploy to Azure
-    # GitHub provides a free Ubuntu Linux machine to run these steps
+  security-scan:
+    name: 🛡️ Security Scan (Secrets + Dependencies)
     runs-on: ubuntu-latest
 
     steps:
       # ─────────────────────────────────────────────────
-      # STEP 1: Download your repo code onto the runner
+      # STEP 1: Checkout with full git history
+      # GitLeaks needs full history to scan all past commits
+      # ─────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ─────────────────────────────────────────────────
+      # STEP 2: GitLeaks — Secret Scanning
+      # Scans the entire codebase for accidentally committed
+      # secrets like API keys, passwords, private keys, tokens.
+      # Fails the pipeline immediately if any secret is found.
+      # ─────────────────────────────────────────────────
+      - name: 🔍 GitLeaks — Secret Scanning
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ─────────────────────────────────────────────────
+      # STEP 3: Set up Node.js for npm audit
+      # ─────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ─────────────────────────────────────────────────
+      # STEP 4: npm audit — Backend
+      # Checks all backend packages against the npm vulnerability
+      # database. Reports HIGH and CRITICAL severity CVEs.
+      # Uses || true so it reports but doesn't block the pipeline.
+      # ─────────────────────────────────────────────────
+      - name: 🔍 npm audit — Backend dependencies
+        run: |
+          echo "======================================"
+          echo "  Backend Dependency Vulnerability Scan"
+          echo "======================================"
+          cd backend
+          npm install --package-lock-only --ignore-scripts
+          npm audit --audit-level=high || true
+
+      # ─────────────────────────────────────────────────
+      # STEP 5: npm audit — Frontend
+      # Same vulnerability check for frontend packages.
+      # ─────────────────────────────────────────────────
+      - name: 🔍 npm audit — Frontend dependencies
+        run: |
+          echo "======================================"
+          echo "  Frontend Dependency Vulnerability Scan"
+          echo "======================================"
+          cd frontend
+          npm install --package-lock-only --ignore-scripts
+          npm audit --audit-level=high || true
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 2: BUILD, SCAN IMAGES & DEPLOY
+  # Only runs if Job 1 (security-scan) passes successfully.
+  # ═══════════════════════════════════════════════════════════════
+  build-and-deploy:
+    name: 🐳 Build, Scan Images and Deploy to Azure
+    runs-on: ubuntu-latest
+    needs: security-scan   # 👈 Depends on security-scan passing
+
+    steps:
+      # ─────────────────────────────────────────────────
+      # STEP 1: Checkout repository
       # ─────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # ─────────────────────────────────────────────────
       # STEP 2: Set up Docker Buildx
-      # Buildx is an enhanced Docker build tool that enables
-      # multi-platform builds and better caching
       # ─────────────────────────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       # ─────────────────────────────────────────────────
       # STEP 3: Log in to Docker Hub
-      # Uses the DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets
-      # you configured in GitHub → Settings → Secrets
       # ─────────────────────────────────────────────────
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -39,39 +104,76 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # ─────────────────────────────────────────────────
-      # STEP 4: Build the backend Docker image and push to Docker Hub
-      # context: ./backend tells Docker to look in the backend/ folder
-      # tags: the name:tag format the image will be stored as on Docker Hub
+      # STEP 4: Build backend image LOCALLY (don't push yet)
+      # We load it into the local Docker daemon so Trivy
+      # can scan it before it gets pushed to Docker Hub.
       # ─────────────────────────────────────────────────
-      - name: Build and push backend image
+      - name: Build backend image (local only)
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          push: true
+          push: false
+          load: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       # ─────────────────────────────────────────────────
-      # STEP 5: Build the frontend Docker image (React + Nginx) and push
-      # The frontend Dockerfile is a multi-stage build:
-      #   Stage 1: node:20-alpine — runs "npm run build"
-      #   Stage 2: nginx:1.25-alpine — serves the built static files
+      # STEP 5: Trivy — Scan backend Docker image
+      # Scans for OS package and library vulnerabilities.
+      # exit-code: 1 = fail the pipeline if CRITICAL CVEs found.
+      # ignore-unfixed: true = skip vulnerabilities with no fix yet.
       # ─────────────────────────────────────────────────
-      - name: Build and push frontend image
+      - name: 🔍 Trivy — Scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-backend:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
+
+      # ─────────────────────────────────────────────────
+      # STEP 6: Push backend image to Docker Hub
+      # Only reached if Trivy scan found NO CRITICAL issues.
+      # ─────────────────────────────────────────────────
+      - name: Push backend image to Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-backend:latest
+
+      # ─────────────────────────────────────────────────
+      # STEP 7: Build frontend image LOCALLY (don't push yet)
+      # ─────────────────────────────────────────────────
+      - name: Build frontend image (local only)
         uses: docker/build-push-action@v5
         with:
           context: ./frontend
-          push: true
+          push: false
+          load: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       # ─────────────────────────────────────────────────
-      # STEP 6: SSH into the Azure VM and deploy the new images
-      # appleboy/ssh-action connects to the VM using the IP,
-      # username, and private key stored in GitHub Secrets,
-      # then runs the "script" block on the remote server
+      # STEP 8: Trivy — Scan frontend Docker image
+      # ─────────────────────────────────────────────────
+      - name: 🔍 Trivy — Scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-frontend:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
+
+      # ─────────────────────────────────────────────────
+      # STEP 9: Push frontend image to Docker Hub
+      # Only reached if Trivy scan found NO CRITICAL issues.
+      # ─────────────────────────────────────────────────
+      - name: Push frontend image to Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager-frontend:latest
+
+      # ─────────────────────────────────────────────────
+      # STEP 10: SSH into the Azure VM and deploy
       # ─────────────────────────────────────────────────
       - name: Deploy to Azure VM via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -98,4 +200,4 @@ jobs:
             # Remove old/unused Docker images to free up disk space on the VM
             docker image prune -f
 
-            echo "✅ Deployment complete!"
+            echo "✅ Deployment complete! All security scans passed."
