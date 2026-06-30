@@ -12,10 +12,13 @@ import './App.css'
 const API_BASE = '/api/tasks'
 
 function App() {
+  // ── Auth (must be first) ──────────────────────────────────
   const { user, loading: authLoading, logout } = useAuth()
   const [authPage, setAuthPage] = useState('login') // 'login' | 'signup'
+
+  // ── Task state ────────────────────────────────────────────
   const [tasks, setTasks] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [filters, setFilters] = useState({ status: 'all', priority: 'all', search: '', sortBy: 'createdAt-desc' })
   const [editingTask, setEditingTask] = useState(null)
@@ -24,34 +27,14 @@ function App() {
   const [view, setView] = useState('board') // 'board' | 'list'
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Show loading spinner while restoring session from localStorage
-  if (authLoading) {
-    return (
-      <div className="auth-page">
-        <div className="auth-glow auth-glow--1" />
-        <div className="auth-glow auth-glow--2" />
-        <div className="auth-card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <div className="auth-spinner" style={{ width: 40, height: 40, margin: '0 auto' }} />
-          <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Restoring session…</p>
-        </div>
-      </div>
-    )
-  }
-
-  // If not logged in, show Login or Signup page
-  if (!user) {
-    if (authPage === 'signup') {
-      return <SignupPage onSwitchToLogin={() => setAuthPage('login')} />
-    }
-    return <LoginPage onSwitchToSignup={() => setAuthPage('signup')} />
-  }
-
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3200)
   }
 
+  // ── ALL hooks must be declared before any early return ────
   const fetchTasks = useCallback(async () => {
+    if (!user) return   // Don't fetch if not logged in
     try {
       setLoading(true)
       setError(null)
@@ -66,9 +49,35 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [filters.status, filters.priority, filters.search])
+  }, [user, filters.status, filters.priority, filters.search])
 
   useEffect(() => { fetchTasks() }, [fetchTasks])
+
+  // ── Early returns AFTER all hooks ─────────────────────────
+
+  // Show loading spinner while restoring session from localStorage
+  if (authLoading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-glow auth-glow--1" />
+        <div className="auth-glow auth-glow--2" />
+        <div className="auth-card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <div className="auth-spinner" style={{ width: 40, height: 40, margin: '0 auto' }} />
+          <p style={{ marginTop: '1rem', color: 'rgba(255,255,255,0.45)' }}>Restoring session…</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not logged in, show Login or Signup page
+  if (!user) {
+    if (authPage === 'signup') {
+      return <SignupPage onSwitchToLogin={() => setAuthPage('login')} />
+    }
+    return <LoginPage onSwitchToSignup={() => setAuthPage('signup')} />
+  }
+
+  // ── Task handlers ─────────────────────────────────────────
 
   const handleCreate = async (taskData) => {
     try {
