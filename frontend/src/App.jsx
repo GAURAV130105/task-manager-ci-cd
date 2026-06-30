@@ -4,11 +4,16 @@ import TaskCard from './components/TaskCard'
 import TaskForm from './components/TaskForm'
 import EditModal from './components/EditModal'
 import Sidebar from './components/Sidebar'
+import LoginPage from './pages/LoginPage'
+import SignupPage from './pages/SignupPage'
+import { useAuth } from './context/AuthContext'
 import './App.css'
 
 const API_BASE = '/api/tasks'
 
 function App() {
+  const { user, loading: authLoading, logout } = useAuth()
+  const [authPage, setAuthPage] = useState('login') // 'login' | 'signup'
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -18,6 +23,28 @@ function App() {
   const [toast, setToast] = useState(null)
   const [view, setView] = useState('board') // 'board' | 'list'
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Show loading spinner while restoring session from localStorage
+  if (authLoading) {
+    return (
+      <div className="auth-page">
+        <div className="auth-glow auth-glow--1" />
+        <div className="auth-glow auth-glow--2" />
+        <div className="auth-card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <div className="auth-spinner" style={{ width: 40, height: 40, margin: '0 auto' }} />
+          <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Restoring session…</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not logged in, show Login or Signup page
+  if (!user) {
+    if (authPage === 'signup') {
+      return <SignupPage onSwitchToLogin={() => setAuthPage('login')} />
+    }
+    return <LoginPage onSwitchToSignup={() => setAuthPage('signup')} />
+  }
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -205,6 +232,17 @@ function App() {
           <button id="btn-add-task" className="btn-add" onClick={() => setShowForm(true)}>
             <span>＋</span> New Task
           </button>
+
+          {/* User avatar + logout */}
+          <div className="topbar__user">
+            <div className="topbar__avatar" title={user?.name}>
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <span className="topbar__username">{user?.name}</span>
+            <button className="topbar__logout" onClick={logout} title="Logout">
+              ⎋ Logout
+            </button>
+          </div>
         </header>
 
         {/* Filter strip */}

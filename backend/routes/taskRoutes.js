@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// GET /api/tasks — Fetch all tasks (with optional filtering)
+// Apply auth middleware to ALL task routes — no unauthenticated access
+router.use(authMiddleware);
+
+// GET /api/tasks — Fetch only the logged-in user's tasks
 router.get('/', async (req, res) => {
   try {
     const { status, priority, search } = req.query;
-    const filter = {};
+
+    // Always filter by the authenticated user's ID
+    const filter = { userId: req.userId };
 
     if (status && status !== 'all') filter.status = status;
     if (priority && priority !== 'all') filter.priority = priority;
@@ -24,7 +30,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/tasks — Create a new task
+// POST /api/tasks — Create a new task for the logged-in user
 router.post('/', async (req, res) => {
   try {
     const { title, description, status, priority, dueDate } = req.body;
@@ -33,7 +39,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Title is required' });
     }
 
-    const task = new Task({ title, description, status, priority, dueDate });
+    // Attach the userId from the verified JWT token
+    const task = new Task({ userId: req.userId, title, description, status, priority, dueDate });
     const savedTask = await task.save();
     res.status(201).json({ success: true, data: savedTask });
   } catch (error) {
@@ -45,19 +52,20 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/tasks/:id — Update an existing task
+// PUT /api/tasks/:id — Update a task (only if it belongs to the user)
 router.put('/:id', async (req, res) => {
   try {
     const { title, description, status, priority, dueDate } = req.body;
 
-    const task = await Task.findByIdAndUpdate(
-      req.params.id,
+    // userId filter ensures users can't edit other users' tasks
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
       { title, description, status, priority, dueDate },
       { new: true, runValidators: true }
     );
 
     if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found' });
+      return res.status(404).json({ success: false, message: 'Task not found.' });
     }
 
     res.json({ success: true, data: task });
@@ -69,13 +77,14 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/tasks/:id — Delete a task
+// DELETE /api/tasks/:id — Delete a task (only if it belongs to the user)
 router.delete('/:id', async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
+    // userId filter ensures users can't delete other users' tasks
+    const task = await Task.findOneAndDelete({ _id: req.params.id, userId: req.userId });
 
     if (!task) {
-      return res.status(404).json({ success: false, message: 'Task not found' });
+      return res.status(404).json({ success: false, message: 'Task not found.' });
     }
 
     res.json({ success: true, message: 'Task deleted successfully', data: task });

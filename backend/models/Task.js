@@ -2,6 +2,13 @@ const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema(
   {
+    // Each task belongs to exactly one user — tasks are private per user
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,   // Index for fast per-user queries
+    },
     title: {
       type: String,
       required: [true, 'Task title is required'],
