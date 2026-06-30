@@ -13,9 +13,8 @@ WORKDIR /usr/src/app
 # Copy package files first (Docker caches this layer if package.json is unchanged)
 COPY package*.json ./
 
-# Use npm ci for a clean, reproducible install from lock file
-# --omit=dev skips devDependencies like nodemon (keeps image small)
-RUN npm ci --omit=dev
+# Install only production dependencies (skip devDependencies like nodemon)
+RUN npm install --omit=dev
 
 # Copy all remaining backend source files
 COPY . .
